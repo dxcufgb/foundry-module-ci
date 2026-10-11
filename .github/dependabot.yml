@@ -1,0 +1,15 @@
+# Keeps the actions used here (workflows and the two composite actions) up to date: one grouped PR a week.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ["/", "/check", "/release"]
+    schedule:
+      interval: weekly
+      day: monday
+    cooldown:
+      default-days: 7
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: ci

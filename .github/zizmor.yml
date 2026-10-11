@@ -1,0 +1,6 @@
+# zizmor settings for the workflow-lint check.
+rules:
+  # zizmor suggests GitHub's new "$/..." syntax for using this repo's own actions (./check) in CI.
+  # The "./check" form is equivalent and supported everywhere (actionlint does not know the new syntax yet).
+  self-repository:
+    disable: true

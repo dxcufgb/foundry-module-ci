@@ -1,0 +1,24 @@
+name: Check Foundry module
+description: >-
+  CI for a dxcufgb Foundry VTT module: optional build and lint commands from .github/foundry-module.json,
+  the module checks (manifest, scripts, languages, templates, import with stubbed Foundry globals, setting
+  translations) and a dry run of the release packaging. Run it after actions/checkout.
+inputs:
+  working-directory:
+    description: "Folder that holds module.json (default: the repository root)."
+    required: false
+    default: "."
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+      with:
+        node-version: 22
+        package-manager-cache: false
+
+    - name: Check module
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: bash "$ACTION_PATH/../scripts/check.sh"
