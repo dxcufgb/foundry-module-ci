@@ -7,7 +7,9 @@
 set -euo pipefail
 
 CONFIG=.github/foundry-module.json
-cfg() { [ -f "$CONFIG" ] && jq -r --arg k "$1" '.[$k] // empty' "$CONFIG" || true; }
+cfg() {
+  if [ -f "$CONFIG" ]; then jq -r --arg k "$1" '.[$k] // empty' "$CONFIG"; fi
+}
 
 build="$(cfg build)"
 if [ -n "$build" ]; then

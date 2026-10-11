@@ -13,7 +13,9 @@
 set -euo pipefail
 
 CONFIG=.github/foundry-module.json
-cfg() { [ -f "$CONFIG" ] && jq -r --arg k "$1" '.[$k] // empty' "$CONFIG" || true; }
+cfg() {
+  if [ -f "$CONFIG" ]; then jq -r --arg k "$1" '.[$k] // empty' "$CONFIG"; fi
+}
 
 # --- which version ----------------------------------------------------------------------------
 case "$EVENT_NAME" in
