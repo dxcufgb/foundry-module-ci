@@ -65,6 +65,11 @@ if (cd "$work/m" && bash "$here/../scripts/package.sh" v1.2.3) >/dev/null 2>&1 \
   && unzip -l "$work/m/module.zip" | grep -q "lang/en.json"; then
   echo "ok   package.sh v1.2.3 stamps the manifest and builds the zip"
 else echo "FAIL package.sh v1.2.3"; failures=$((failures + 1)); fi
+reset; printf 'inheritance: true\n' >"$work/m/.coderabbit.yaml"; printf '# notes\n' >"$work/m/CLAUDE.md"
+if (cd "$work/m" && bash "$here/../scripts/package.sh" v1.2.3) >/dev/null 2>&1 \
+  && ! zipinfo -1 "$work/m/module.zip" | grep -qE '^(\.coderabbit\.yaml|CLAUDE\.md)$'; then
+  echo "ok   package.sh leaves .coderabbit.yaml and CLAUDE.md out of the zip"
+else echo "FAIL review and agent files shipped in module.zip"; failures=$((failures + 1)); fi
 
 echo
 if [ "$failures" -eq 0 ]; then echo "All tests passed."; else echo "$failures test(s) failed."; exit 1; fi
