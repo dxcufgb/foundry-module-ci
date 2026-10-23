@@ -41,7 +41,7 @@ mv module.tmp.json module.json
 
 # Never shipped, whatever "include" says.
 EXCLUDES=(".git/*" ".github/*" ".githooks/*" ".claude/*" ".vscode/*" "node_modules/*"
-  ".gitignore" ".gitattributes" ".editorconfig" "CLAUDE.md" "module.zip" "*.tmp.json"
+  ".gitignore" ".gitattributes" ".editorconfig" "CLAUDE.md" ".coderabbit.yaml" "module.zip" "*.tmp.json"
   "*/LOCK" "*/LOG" "*/LOG.old")
 
 rm -f module.zip

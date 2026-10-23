@@ -1,0 +1,27 @@
+# CodeRabbit settings for foundry-module-ci.
+# Shared rules come from the central dxcufgb/coderabbit repository (inheritance: true), and CodeRabbit reads
+# the README as code guidelines. Only what is specific to this repository is here.
+# Paths here must not repeat a central path (scripts/**/*.js, .github/workflows/**, **/*.sh, **/*.ps1, **/*.iss,
+# module.json, **/*.md): an entry with the same path replaces the central one instead of adding to it.
+# Check the merged result on a pull request with: @coderabbitai configuration
+inheritance: true
+
+reviews:
+  path_instructions:
+    - path: "{check,release}/action.yml"
+      instructions: |
+        Composite actions used by every dxcufgb Foundry module: a change here changes all of them at once. Flag
+        breaking changes to inputs or outputs, and anything that could publish a release from an unchecked
+        commit, overwrite an existing version, or run on a branch other than main.
+    - path: "scripts/**"
+      instructions: |
+        check-module.mjs has no dependencies and imports each module with stubbed Foundry globals: new checks
+        must not be flaky or need network. release.sh/package.sh must refuse anything but X.Y.Z, never overwrite
+        an existing release, and only publish what was built and checked in the same run.
+    - path: "templates/**"
+      instructions: |
+        The workflow files every module copies: changes must be applied to every module repository too (say so
+        in the PR), and pins must stay full SHAs.
+    - path: "test/**"
+      instructions: |
+        The fixture module must keep exercising every check; a new check needs a passing and a failing case.

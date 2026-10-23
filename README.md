@@ -65,7 +65,7 @@ Optional. Most modules need none. All keys are optional:
 | `importTest` | `true` | `false` to skip the import test (part 3) |
 
 Never shipped, whatever `include` says: `.git`, `.github`, `.githooks`, `.claude`, `.vscode`,
-`node_modules`, `CLAUDE.md`, dotfiles, pack `LOCK`/`LOG` files.
+`node_modules`, `CLAUDE.md`, `.coderabbit.yaml`, `.gitignore`, `.gitattributes`, `.editorconfig`, pack `LOCK`/`LOG` files.
 
 ## The workflow files in each module
 
