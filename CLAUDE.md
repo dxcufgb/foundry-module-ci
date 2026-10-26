@@ -10,7 +10,13 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
 - `check/action.yml` – composite action: `actions/setup-node` (Node 22), then `scripts/check.sh` in the input
   `working-directory` (default `.`).
 - `release/action.yml` – composite action: setup-node, then `scripts/release.sh` with `GH_TOKEN` (input
-  `github-token`), `VERSION_INPUT` (input `version`), `EVENT_NAME`, `EVENT_TAG`, `DEFAULT_BRANCH` from the event.
+  `github-token`), `VERSION_INPUT` (input `version`), `EVENT_NAME`, `EVENT_TAG`, `DEFAULT_BRANCH` from the event;
+  then, only when the optional input `site-dispatch-token` is set, `scripts/notify-site.sh` with that token as
+  `GH_TOKEN`.
+- `scripts/notify-site.sh` – sends the `module-released` repository dispatch (payload `repository`, `tag`) to
+  `site-repository` (default `dxcufgb/FVTT-dev-showcase`, must match `owner/repo`) so the Workshop site rebuilds.
+  The release is already published when it runs, so it never fails the job: a refused ping is a `::warning::`
+  (without the token).
 - `scripts/check.sh` – the optional `build` and `lint` commands from `.github/foundry-module.json`, then
   `check-module.mjs`, then a dry run of `package.sh v0.0.0` (`module.json` restored, `module.zip` removed).
 - `scripts/check-module.mjs` – the module checks: (1) `module.json` fields, id characters, every referenced file
@@ -31,7 +37,8 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   `__VERSION__` replaced by this repository's release commit and tag. Job name **Check module** is a required check
   in the module rulesets.
 - `test/run.sh` – runs `check.sh`/`package.sh` against `test/fixture-module` (module id `fmc-fixture`): one passing
-  case, failure cases each with the expected message, tag validation of `package.sh`.
+  case, failure cases each with the expected message, tag validation of `package.sh`; `notify-site.sh` against a
+  stub `gh` on `PATH` (payload, refused ping is a warning, malformed `site-repository`).
 - `.github/workflows/ci.yml` (shellcheck, `test/run.sh`, the `./check` action on the fixture), `workflow-lint.yml`
   (actionlint, zizmor; `.github/zizmor.yml` disables `self-repository`), `dependabot.yml` (`/`, `/check`, `/release`).
 
@@ -53,6 +60,9 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   default-branch check, the exact `^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$` tag rule in both
   `release.sh` and `package.sh` (Foundry installs from `releases/latest`, which skips pre-releases), and the refusal
   of an existing tag or release. Never overwrite an existing release on `workflow_dispatch`.
+- **Site ping**: runs only after the release is published and never fails the job; `SITE_DISPATCH_TOKEN` goes only
+  to `gh api` (api.github.com) through `env:`, never into a log line or a `run:` expression. A module without the
+  secret must release exactly as before.
 - **Manifest contract**: the URLs `package.sh` stamps (`.../releases/latest/download/module.json`,
   `.../releases/download/<tag>/module.zip`) are what Foundry and the dxcufgb private GitHub proxy use; the proxy
   serves exactly the files `module.json` and `module.zip`. Do not rename them.

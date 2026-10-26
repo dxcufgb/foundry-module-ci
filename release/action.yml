@@ -11,6 +11,17 @@ inputs:
   github-token:
     description: Token used to create the release (pass github.token).
     required: true
+  site-dispatch-token:
+    description: >-
+      Optional. A fine-grained token with Contents read and write on the Workshop site repository (pass
+      secrets.SITE_DISPATCH_TOKEN). When set, the site is asked to rebuild after the release is published; a failed
+      ping is only a warning. Empty: no ping (the site's schedule still picks the release up).
+    required: false
+    default: ""
+  site-repository:
+    description: The Workshop site repository to ask for a rebuild (owner/repo).
+    required: false
+    default: dxcufgb/FVTT-dev-showcase
 runs:
   using: composite
   steps:
@@ -29,3 +40,14 @@ runs:
         EVENT_TAG: ${{ github.event.release.tag_name }}
         DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
       run: bash "$ACTION_PATH/../scripts/release.sh"
+
+    - name: Ask the Workshop site to rebuild
+      if: inputs.site-dispatch-token != ''
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ inputs.site-dispatch-token }}
+        SITE_REPOSITORY: ${{ inputs.site-repository }}
+        VERSION_INPUT: ${{ inputs.version }}
+        EVENT_TAG: ${{ github.event.release.tag_name }}
+      run: bash "$ACTION_PATH/../scripts/notify-site.sh"
