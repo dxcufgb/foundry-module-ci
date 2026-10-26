@@ -28,6 +28,20 @@ afterwards, but if that build fails the release stays without files, so prefer *
 People install a public module from `https://github.com/dxcufgb/<repo>/releases/latest/download/module.json`.
 Private modules are installed through the Foundry private GitHub proxy, which serves the same two files.
 
+### Updating the Workshop site on release
+
+The [Workshop site](https://github.com/dxcufgb/FVTT-dev-showcase) rebuilds every 6 hours on its own. When the
+module repository has the secret `SITE_DISPATCH_TOKEN`, the release workflow also asks it to rebuild right after
+the release is published (a `module-released` repository dispatch), so the new version shows up within minutes.
+Without the secret nothing changes. A failed ping (expired token, missing permission) is a warning on the run; the
+release itself is already out.
+
+The token: a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) with
+**Repository access: only `dxcufgb/FVTT-dev-showcase`** and **Contents: Read and write** (what a repository
+dispatch needs), nothing else. Save it as the repository secret `SITE_DISPATCH_TOKEN` in each module, e.g.
+`gh secret set SITE_DISPATCH_TOKEN -R dxcufgb/<repo>` (it reads the value from the prompt). The action inputs are
+`site-dispatch-token` (empty = no ping) and `site-repository` (default `dxcufgb/FVTT-dev-showcase`).
+
 ## The checks
 
 `scripts/check-module.mjs` (no dependencies):

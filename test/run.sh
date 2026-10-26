@@ -71,5 +71,39 @@ if (cd "$work/m" && bash "$here/../scripts/package.sh" v1.2.3) >/dev/null 2>&1 \
   echo "ok   package.sh leaves .coderabbit.yaml and CLAUDE.md out of the zip"
 else echo "FAIL review and agent files shipped in module.zip"; failures=$((failures + 1)); fi
 
+# notify-site.sh against a stub gh: it records its arguments and exits with $STUB_EXIT.
+mkdir -p "$work/bin"
+cat >"$work/bin/gh" <<'EOF'
+#!/usr/bin/env bash
+printf '%s\n' "$@" >"$STUB_ARGS"
+[ "${STUB_EXIT:-0}" = 0 ] || echo "HTTP 403: Resource not accessible by personal access token" >&2
+exit "${STUB_EXIT:-0}"
+EOF
+chmod +x "$work/bin/gh"
+notify() { env PATH="$work/bin:$PATH" STUB_ARGS="$work/gh.args" GH_TOKEN=dummy "$@" bash "$here/../scripts/notify-site.sh" >"$work/out.log" 2>&1; }
+rm -f "$work/gh.args"
+if notify STUB_EXIT=0 SITE_REPOSITORY=dxcufgb/FVTT-dev-showcase VERSION_INPUT=1.2.3 \
+  && grep -qx 'repos/dxcufgb/FVTT-dev-showcase/dispatches' "$work/gh.args" \
+  && grep -qx 'event_type=module-released' "$work/gh.args" \
+  && grep -qx "client_payload\[repository\]=$GITHUB_REPOSITORY" "$work/gh.args" \
+  && grep -qx 'client_payload\[tag\]=v1.2.3' "$work/gh.args"; then
+  echo "ok   notify-site.sh sends module-released with the repository and tag"
+else echo "FAIL notify-site.sh dispatch"; cat "$work/out.log"; failures=$((failures + 1)); fi
+rm -f "$work/gh.args"
+if notify STUB_EXIT=0 SITE_REPOSITORY=dxcufgb/FVTT-dev-showcase EVENT_TAG=v2.0.0 VERSION_INPUT= \
+  && grep -qx 'client_payload\[tag\]=v2.0.0' "$work/gh.args"; then
+  echo "ok   notify-site.sh uses the tag of a release published by hand"
+else echo "FAIL notify-site.sh tag of a published release"; failures=$((failures + 1)); fi
+if notify STUB_EXIT=1 SITE_REPOSITORY=dxcufgb/FVTT-dev-showcase VERSION_INPUT=1.2.3 \
+  && grep -q '::warning::Could not ask dxcufgb/FVTT-dev-showcase to rebuild: HTTP 403' "$work/out.log" \
+  && ! grep -q dummy "$work/out.log"; then
+  echo "ok   a failed ping is a warning, not a failure, and does not print the token"
+else echo "FAIL notify-site.sh failed ping"; cat "$work/out.log"; failures=$((failures + 1)); fi
+rm -f "$work/gh.args"
+if notify STUB_EXIT=0 SITE_REPOSITORY='bad repo; rm -rf /' VERSION_INPUT=1.2.3 \
+  && grep -q '::warning::site-repository must be owner/repo' "$work/out.log" && [ ! -e "$work/gh.args" ]; then
+  echo "ok   notify-site.sh refuses a malformed site-repository without calling gh"
+else echo "FAIL notify-site.sh malformed site-repository"; failures=$((failures + 1)); fi
+
 echo
 if [ "$failures" -eq 0 ]; then echo "All tests passed."; else echo "$failures test(s) failed."; exit 1; fi
