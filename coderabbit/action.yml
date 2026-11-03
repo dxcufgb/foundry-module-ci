@@ -1,0 +1,19 @@
+name: Ask CodeRabbit for a review
+description: >-
+  Comments "@coderabbitai review" on the pull request that triggered the workflow. CodeRabbit skips automatic
+  reviews on repositories with fewer than 10 stars but still answers this command. Run it from a pull_request
+  workflow whose job has pull-requests: write; no checkout needed. A comment that cannot be posted is a warning.
+inputs:
+  github-token:
+    description: Token that posts the comment (pass github.token).
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Ask CodeRabbit for a review
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: bash "$ACTION_PATH/../scripts/coderabbit-review.sh"
