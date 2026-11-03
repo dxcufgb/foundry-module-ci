@@ -1,12 +1,13 @@
 # foundry-module-ci
 
 Shared CI and release for dxcufgb's Foundry VTT modules. Every module repository has the same two
-small workflow files; the work happens here, in two composite actions:
+small workflow files; the work happens here, in composite actions:
 
 | Action | What it does |
 |---|---|
 | `dxcufgb/foundry-module-ci/check` | CI: optional build and lint commands, the module checks, and a dry run of the release packaging |
 | `dxcufgb/foundry-module-ci/release` | Release: checks and builds everything, then creates and publishes `vX.Y.Z` with `module.json` and `module.zip` |
+| `dxcufgb/foundry-module-ci/coderabbit` | Asks CodeRabbit to review a pull request (any repository, not only modules) |
 
 ## Releasing a module (the same in every repository)
 
@@ -41,6 +42,25 @@ The token: a [fine-grained personal access token](https://github.com/settings/pe
 dispatch needs), nothing else. Save it as the repository secret `SITE_DISPATCH_TOKEN` in each module, e.g.
 `gh secret set SITE_DISPATCH_TOKEN -R dxcufgb/<repo>` (it reads the value from the prompt). The action inputs are
 `site-dispatch-token` (empty = no ping) and `site-repository` (default `dxcufgb/FVTT-dev-showcase`).
+
+## CodeRabbit reviews
+
+CodeRabbit no longer reviews pull requests automatically on repositories with fewer than 10 stars, but it still
+answers a `@coderabbitai review` comment. [`templates/coderabbit.yml`](templates/coderabbit.yml) posts that comment
+for you when a pull request is opened, updated, reopened or marked ready for review (drafts, bot-opened PRs and PRs
+from forks are skipped; comment by hand on those). Copy it to `.github/workflows/coderabbit.yml` in every repository
+CodeRabbit reviews; it needs no checkout and works in repositories that are not modules too.
+
+CodeRabbit ignores the command when `github-actions[bot]` posts it, so the comment is posted as you, with the
+repository secret `CODERABBIT_TRIGGER_TOKEN`:
+
+1. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new):
+   **Repository access: All repositories** (or the ones CodeRabbit reviews), **Permissions → Pull requests: Read
+   and write**, nothing else.
+2. Save it in each repository, e.g. `gh secret set CODERABBIT_TRIGGER_TOKEN -R dxcufgb/<repo>` (it reads the value
+   from the prompt).
+
+Without the secret, or with an expired token, the run is only a warning and nothing is commented.
 
 ## The checks
 
@@ -83,8 +103,8 @@ Never shipped, whatever `include` says: `.git`, `.github`, `.githooks`, `.claude
 
 ## The workflow files in each module
 
-Copy [`templates/ci.yml`](templates/ci.yml) and [`templates/release.yml`](templates/release.yml) to
-`.github/workflows/` unchanged. The job name **Check module** is a required status check in the module
+Copy [`templates/ci.yml`](templates/ci.yml), [`templates/release.yml`](templates/release.yml) and
+[`templates/coderabbit.yml`](templates/coderabbit.yml) to `.github/workflows/` unchanged. The job name **Check module** is a required status check in the module
 rulesets. Both pin this repository to a commit SHA; Dependabot (github-actions) proposes the update when a
 new version is tagged here, so a fix here reaches every module through one PR each.
 

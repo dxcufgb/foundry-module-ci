@@ -1,7 +1,7 @@
 # foundry-module-ci
 
-Shared CI and release for every dxcufgb Foundry VTT module repository. It is not a module: it holds two composite
-actions (`check/`, `release/`) and the scripts they run, plus the two workflow files every module copies. Module
+Shared CI and release for every dxcufgb Foundry VTT module repository. It is not a module: it holds three composite
+actions (`check/`, `release/`, `coderabbit/`) and the scripts they run, plus the workflow files every module copies. Module
 repositories pin it by commit SHA (`dxcufgb/foundry-module-ci/check@<sha> # vX.Y.Z`) and Dependabot proposes the
 update when a new tag is made here. No build step and no npm dependencies (Node built-ins, bash, `jq`, `zip`,
 `unzip`, `gh`).
@@ -17,6 +17,13 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   `site-repository` (default `dxcufgb/FVTT-dev-showcase`, must match `owner/repo`) so the Workshop site rebuilds.
   The release is already published when it runs, so it never fails the job: a refused ping is a `::warning::`
   (without the token).
+- `coderabbit/action.yml` – composite action: `scripts/coderabbit-review.sh` with `GH_TOKEN` (input `github-token`)
+  and `PR_NUMBER` from the event. Usable from any repository, not only modules.
+- `scripts/coderabbit-review.sh` – comments `@coderabbitai review` on the pull request (CodeRabbit skips automatic
+  reviews on repositories under 10 stars but answers the command, only from a person: it ignores
+  `github-actions[bot]`, so the token is the `CODERABBIT_TRIGGER_TOKEN` personal access token, never
+  `github.token`). Optional, so a missing token, a refused comment or a missing PR number is a `::warning::`, never
+  an error. The token goes only to `gh api` through `env:`.
 - `scripts/check.sh` – the optional `build` and `lint` commands from `.github/foundry-module.json`, then
   `check-module.mjs`, then a dry run of `package.sh v0.0.0` (`module.json` restored, `module.zip` removed).
 - `scripts/check-module.mjs` – the module checks: (1) `module.json` fields, id characters, every referenced file
@@ -33,12 +40,14 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   refused if the tag or a release/draft of that name exists; builds, checks, packages, then
   `gh release create --draft --target $GITHUB_SHA` with both files and publishes it as latest. `release` event
   (published by hand): builds and `gh release upload --clobber` the two files to that release.
-- `templates/ci.yml`, `templates/release.yml` – the workflow files every module copies unchanged, with `__SHA__` /
-  `__VERSION__` replaced by this repository's release commit and tag. Job name **Check module** is a required check
+- `templates/ci.yml`, `templates/release.yml`, `templates/coderabbit.yml` – the workflow files every module copies
+  unchanged, with `__SHA__` / `__VERSION__` replaced by this repository's release commit and tag (`coderabbit.yml`
+  also goes to the bot, server and other repositories CodeRabbit reviews). Job name **Check module** is a required check
   in the module rulesets.
 - `test/run.sh` – runs `check.sh`/`package.sh` against `test/fixture-module` (module id `fmc-fixture`): one passing
   case, failure cases each with the expected message, tag validation of `package.sh`; `notify-site.sh` against a
-  stub `gh` on `PATH` (payload, refused ping is a warning, malformed `site-repository`).
+  stub `gh` on `PATH` (payload, refused ping is a warning, malformed `site-repository`); `coderabbit-review.sh` against
+  the same stub (comment, refused comment is a warning, no token, no PR number).
 - `.github/workflows/ci.yml` (shellcheck, `test/run.sh`, the `./check` action on the fixture), `workflow-lint.yml`
   (actionlint, zizmor; `.github/zizmor.yml` disables `self-repository`), `dependabot.yml` (`/`, `/check`, `/release`).
 

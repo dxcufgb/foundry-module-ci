@@ -105,5 +105,31 @@ if notify STUB_EXIT=0 SITE_REPOSITORY='bad repo; rm -rf /' VERSION_INPUT=1.2.3 \
   echo "ok   notify-site.sh refuses a malformed site-repository without calling gh"
 else echo "FAIL notify-site.sh malformed site-repository"; failures=$((failures + 1)); fi
 
+# coderabbit-review.sh against the same stub gh.
+review() { env PATH="$work/bin:$PATH" STUB_ARGS="$work/gh.args" GH_TOKEN=dummy "$@" bash "$here/../scripts/coderabbit-review.sh" >"$work/out.log" 2>&1; }
+rm -f "$work/gh.args"
+if review STUB_EXIT=0 PR_NUMBER=7 \
+  && grep -qx "repos/$GITHUB_REPOSITORY/issues/7/comments" "$work/gh.args" \
+  && grep -qx 'body=@coderabbitai review' "$work/gh.args" \
+  && grep -q 'Asked CodeRabbit to review #7.' "$work/out.log"; then
+  echo "ok   coderabbit-review.sh comments @coderabbitai review on the pull request"
+else echo "FAIL coderabbit-review.sh comment"; cat "$work/out.log"; failures=$((failures + 1)); fi
+if review STUB_EXIT=1 PR_NUMBER=7 \
+  && grep -q '::warning::Could not ask CodeRabbit to review #7: HTTP 403' "$work/out.log" \
+  && ! grep -q dummy "$work/out.log"; then
+  echo "ok   a refused comment is a warning, not a failure, and does not print the token"
+else echo "FAIL coderabbit-review.sh refused comment"; cat "$work/out.log"; failures=$((failures + 1)); fi
+rm -f "$work/gh.args"
+rm -f "$work/gh.args"
+if review STUB_EXIT=0 PR_NUMBER=7 GH_TOKEN= \
+  && grep -q '::warning::The repository secret CODERABBIT_TRIGGER_TOKEN is not set' "$work/out.log" && [ ! -e "$work/gh.args" ]; then
+  echo "ok   coderabbit-review.sh without a token warns without calling gh"
+else echo "FAIL coderabbit-review.sh without a token"; cat "$work/out.log"; failures=$((failures + 1)); fi
+rm -f "$work/gh.args"
+if review STUB_EXIT=0 PR_NUMBER= \
+  && grep -q '::warning::No pull request number' "$work/out.log" && [ ! -e "$work/gh.args" ]; then
+  echo "ok   coderabbit-review.sh without a pull request warns without calling gh"
+else echo "FAIL coderabbit-review.sh without a pull request"; failures=$((failures + 1)); fi
+
 echo
 if [ "$failures" -eq 0 ]; then echo "All tests passed."; else echo "$failures test(s) failed."; exit 1; fi

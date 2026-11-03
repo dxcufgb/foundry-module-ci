@@ -1,0 +1,23 @@
+name: Ask CodeRabbit for a review
+description: >-
+  Comments "@coderabbitai review" on the pull request that triggered the workflow. CodeRabbit skips automatic
+  reviews on repositories with fewer than 10 stars but still answers this command, though only from a person, so
+  the comment is posted with a personal access token. No checkout needed. A comment that cannot be posted, or a
+  missing token, is a warning.
+inputs:
+  github-token:
+    description: >-
+      Fine-grained personal access token with Pull requests read and write (pass secrets.CODERABBIT_TRIGGER_TOKEN).
+      CodeRabbit ignores the command from github-actions[bot], so github.token does not work. Empty: a warning.
+    required: false
+    default: ""
+runs:
+  using: composite
+  steps:
+    - name: Ask CodeRabbit for a review
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        PR_NUMBER: ${{ github.event.pull_request.number }}
+      run: bash "$ACTION_PATH/../scripts/coderabbit-review.sh"
