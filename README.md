@@ -49,8 +49,18 @@ CodeRabbit no longer reviews pull requests automatically on repositories with fe
 answers a `@coderabbitai review` comment. [`templates/coderabbit.yml`](templates/coderabbit.yml) posts that comment
 for you when a pull request is opened, updated, reopened or marked ready for review (drafts, bot-opened PRs and PRs
 from forks are skipped; comment by hand on those). Copy it to `.github/workflows/coderabbit.yml` in every repository
-CodeRabbit reviews; it needs no secret and no checkout, and works in repositories that are not modules too. A
-comment that cannot be posted is only a warning on the run.
+CodeRabbit reviews; it needs no checkout and works in repositories that are not modules too.
+
+CodeRabbit ignores the command when `github-actions[bot]` posts it, so the comment is posted as you, with the
+repository secret `CODERABBIT_TRIGGER_TOKEN`:
+
+1. Create a [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new):
+   **Repository access: All repositories** (or the ones CodeRabbit reviews), **Permissions → Pull requests: Read
+   and write**, nothing else.
+2. Save it in each repository, e.g. `gh secret set CODERABBIT_TRIGGER_TOKEN -R dxcufgb/<repo>` (it reads the value
+   from the prompt).
+
+Without the secret, or with an expired token, the run is only a warning and nothing is commented.
 
 ## The checks
 

@@ -20,8 +20,10 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
 - `coderabbit/action.yml` – composite action: `scripts/coderabbit-review.sh` with `GH_TOKEN` (input `github-token`)
   and `PR_NUMBER` from the event. Usable from any repository, not only modules.
 - `scripts/coderabbit-review.sh` – comments `@coderabbitai review` on the pull request (CodeRabbit skips automatic
-  reviews on repositories under 10 stars but answers the command). Optional, so a refused comment or a missing PR
-  number is a `::warning::`, never an error.
+  reviews on repositories under 10 stars but answers the command, only from a person: it ignores
+  `github-actions[bot]`, so the token is the `CODERABBIT_TRIGGER_TOKEN` personal access token, never
+  `github.token`). Optional, so a missing token, a refused comment or a missing PR number is a `::warning::`, never
+  an error. The token goes only to `gh api` through `env:`.
 - `scripts/check.sh` – the optional `build` and `lint` commands from `.github/foundry-module.json`, then
   `check-module.mjs`, then a dry run of `package.sh v0.0.0` (`module.json` restored, `module.zip` removed).
 - `scripts/check-module.mjs` – the module checks: (1) `module.json` fields, id characters, every referenced file
@@ -45,7 +47,7 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
 - `test/run.sh` – runs `check.sh`/`package.sh` against `test/fixture-module` (module id `fmc-fixture`): one passing
   case, failure cases each with the expected message, tag validation of `package.sh`; `notify-site.sh` against a
   stub `gh` on `PATH` (payload, refused ping is a warning, malformed `site-repository`); `coderabbit-review.sh` against
-  the same stub (comment, refused comment is a warning, no PR number).
+  the same stub (comment, refused comment is a warning, no token, no PR number).
 - `.github/workflows/ci.yml` (shellcheck, `test/run.sh`, the `./check` action on the fixture), `workflow-lint.yml`
   (actionlint, zizmor; `.github/zizmor.yml` disables `self-repository`), `dependabot.yml` (`/`, `/check`, `/release`).
 

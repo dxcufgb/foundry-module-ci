@@ -120,6 +120,12 @@ if review STUB_EXIT=1 PR_NUMBER=7 \
   echo "ok   a refused comment is a warning, not a failure, and does not print the token"
 else echo "FAIL coderabbit-review.sh refused comment"; cat "$work/out.log"; failures=$((failures + 1)); fi
 rm -f "$work/gh.args"
+rm -f "$work/gh.args"
+if review STUB_EXIT=0 PR_NUMBER=7 GH_TOKEN= \
+  && grep -q '::warning::The repository secret CODERABBIT_TRIGGER_TOKEN is not set' "$work/out.log" && [ ! -e "$work/gh.args" ]; then
+  echo "ok   coderabbit-review.sh without a token warns without calling gh"
+else echo "FAIL coderabbit-review.sh without a token"; cat "$work/out.log"; failures=$((failures + 1)); fi
+rm -f "$work/gh.args"
 if review STUB_EXIT=0 PR_NUMBER= \
   && grep -q '::warning::No pull request number' "$work/out.log" && [ ! -e "$work/gh.args" ]; then
   echo "ok   coderabbit-review.sh without a pull request warns without calling gh"
