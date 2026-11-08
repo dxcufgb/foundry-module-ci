@@ -72,10 +72,8 @@ jobs:
       contains(github.event.comment.body, '@claude')
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    # One answer at a time per issue or PR; later mentions wait instead of cancelling a running answer.
-    concurrency:
-      group: claude-respond-${{ github.event.issue.number || github.event.pull_request.number }}
-      cancel-in-progress: false
+    # No concurrency group: GitHub keeps only one pending run per group, so a third mention would replace the
+    # second, which would then never be answered. Every mention gets its own run.
     permissions:
       contents: write
       pull-requests: write
