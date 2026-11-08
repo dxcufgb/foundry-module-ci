@@ -1,0 +1,96 @@
+# The Claude review, shared by every dxcufgb repository. Each repository has the small caller from
+# templates/claude.yml: it sets the triggers, grants the permissions, passes the secret and calls this file
+# (pinned by commit SHA, so Dependabot proposes the update when a new tag is made here). This repository calls it
+# from its own .github/workflows/claude.yml.
+#
+# Authenticated with the Claude subscription token in the caller's CLAUDE_CODE_OAUTH_TOKEN repository secret
+# (created with `claude setup-token`). github.event, github.repository and the checkout are the caller's.
+#
+#   - review:  every pull request that is opened, updated, reopened or marked ready for review
+#              gets an automatic review: inline comments on problems, or one summary comment.
+#              Drafts, bot-opened PRs (Dependabot, Renovate) and PRs from forks are skipped.
+#              The review plugin skips a PR that Claude has already commented on, so after
+#              pushing more commits ask for a fresh one with "@claude review".
+#              Project rules for the reviewer are in the repository's CLAUDE.md.
+#   - respond: mention @claude in a PR or issue comment (or a PR review comment) to ask a
+#              question or request a change. Only the owner, members and collaborators start the
+#              job, never bots; claude-code-action also refuses commenters without write access.
+
+name: Claude (shared)
+
+on:
+  workflow_call:
+    secrets:
+      CLAUDE_CODE_OAUTH_TOKEN:
+        description: The Claude subscription token (`claude setup-token`).
+        required: true
+
+permissions: {}
+
+jobs:
+  review:
+    name: Review
+    # Skips drafts, PRs opened by bots (Dependabot, Renovate, apps: the action refuses bot-triggered runs) and PRs
+    # from forks (they get no secrets, so the review could only fail; ask "@claude review" on those instead).
+    if: >-
+      github.event_name == 'pull_request' && !github.event.pull_request.draft &&
+      github.event.pull_request.user.type != 'Bot' &&
+      github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    concurrency:
+      group: claude-review-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      pull-requests: read
+      issues: read
+      id-token: write # the action exchanges it for a Claude GitHub App token to post comments
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          plugin_marketplaces: "https://github.com/anthropics/claude-code.git"
+          plugins: "code-review@claude-code-plugins"
+          prompt: "/code-review:code-review --comment ${{ github.repository }}/pull/${{ github.event.pull_request.number }}"
+          claude_args: '--allowedTools "mcp__github_inline_comment__create_inline_comment"'
+
+  respond:
+    name: Respond to @claude
+    # Bot comments are skipped: contains() ignores case, so a bot quoting "@CLAUDE.md" (CodeRabbit does) would start
+    # the job, and claude-code-action refuses bot actors, which fails the run. Only people with a role on the
+    # repository start it at all (the action also checks for write access).
+    if: >-
+      (github.event_name == 'issue_comment' || github.event_name == 'pull_request_review_comment') &&
+      github.event.comment.user.type != 'Bot' &&
+      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association) &&
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # One answer at a time per issue or PR; later mentions wait instead of cancelling a running answer.
+    concurrency:
+      group: claude-respond-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+      id-token: write # the action exchanges it for a Claude GitHub App token
+      actions: read # lets Claude read CI results on the PR
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: anthropics/claude-code-action@d535f5172dec02b204866b393d6b20b9b2aaf98d # v1.0.266
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Turns on the CI tools (run status, job logs); the job permission above alone is not enough.
+          additional_permissions: |
+            actions: read
