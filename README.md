@@ -1,6 +1,6 @@
 # foundry-module-ci
 
-Shared CI and release for dxcufgb's Foundry VTT modules. Every module repository has the same two
+Shared CI and release for dxcufgb's Foundry VTT modules. Every module repository has the same
 small workflow files; the work happens here, in composite actions:
 
 | Action | What it does |
@@ -8,6 +8,9 @@ small workflow files; the work happens here, in composite actions:
 | `dxcufgb/foundry-module-ci/check` | CI: optional build and lint commands, the module checks, and a dry run of the release packaging |
 | `dxcufgb/foundry-module-ci/release` | Release: checks and builds everything, then creates and publishes `vX.Y.Z` with `module.json` and `module.zip` |
 | `dxcufgb/foundry-module-ci/coderabbit` | Asks CodeRabbit to review a pull request (any repository, not only modules) |
+
+and one shared (reusable) workflow, `.github/workflows/claude-reusable.yml`: the Claude review (see
+[Claude reviews](#claude-reviews)).
 
 ## Releasing a module (the same in every repository)
 
@@ -62,6 +65,24 @@ repository secret `CODERABBIT_TRIGGER_TOKEN`:
 
 Without the secret, or with an expired token, the run is only a warning and nothing is commented.
 
+## Claude reviews
+
+[`.github/workflows/claude-reusable.yml`](.github/workflows/claude-reusable.yml) holds both Claude jobs:
+
+- **Review**: every pull request that is opened, updated, reopened or marked ready for review gets an automatic
+  review (drafts, bot-opened PRs and PRs from forks are skipped). Ask for a fresh one with `@claude review`.
+- **Respond to @claude**: a PR or issue comment (or a PR review comment) that mentions `@claude` gets an answer
+  or a change. Only the owner, members and collaborators start it, never bots (`contains()` ignores case, so a bot
+  quoting `@CLAUDE.md` would otherwise start it, and the action fails on bot actors).
+
+Every repository, modules or not, has the same caller, [`templates/claude.yml`](templates/claude.yml), as
+`.github/workflows/claude.yml`. A shared workflow cannot declare the caller's triggers, so the caller keeps them,
+grants the permissions (each job here asks for less) and passes the repository secret `CLAUDE_CODE_OAUTH_TOKEN`
+(created with `claude setup-token`). The check names become `claude / Review` and `claude / Respond to @claude`.
+Comment events always run the default branch's `claude.yml`, so a change to the respond job takes effect once the
+caller's pin is bumped on `main`. This repository calls the file locally (`./.github/workflows/claude-reusable.yml`),
+so a pull request here reviews itself with its own version.
+
 ## The checks
 
 `scripts/check-module.mjs` (no dependencies):
@@ -103,9 +124,10 @@ Never shipped, whatever `include` says: `.git`, `.github`, `.githooks`, `.claude
 
 ## The workflow files in each module
 
-Copy [`templates/ci.yml`](templates/ci.yml), [`templates/release.yml`](templates/release.yml) and
-[`templates/coderabbit.yml`](templates/coderabbit.yml) to `.github/workflows/` unchanged. The job name **Check module** is a required status check in the module
-rulesets. Both pin this repository to a commit SHA; Dependabot (github-actions) proposes the update when a
+Copy [`templates/ci.yml`](templates/ci.yml), [`templates/release.yml`](templates/release.yml),
+[`templates/coderabbit.yml`](templates/coderabbit.yml) and [`templates/claude.yml`](templates/claude.yml) to
+`.github/workflows/` unchanged (`coderabbit.yml` and `claude.yml` go to the other repositories too). The job name **Check module** is a required status check in the module
+rulesets. They pin this repository to a commit SHA; Dependabot (github-actions) proposes the update when a
 new version is tagged here, so a fix here reaches every module through one PR each.
 
 ## Changing this repository

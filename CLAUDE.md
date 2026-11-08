@@ -40,9 +40,13 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   refused if the tag or a release/draft of that name exists; builds, checks, packages, then
   `gh release create --draft --target $GITHUB_SHA` with both files and publishes it as latest. `release` event
   (published by hand): builds and `gh release upload --clobber` the two files to that release.
-- `templates/ci.yml`, `templates/release.yml`, `templates/coderabbit.yml` – the workflow files every module copies
-  unchanged, with `__SHA__` / `__VERSION__` replaced by this repository's release commit and tag (`coderabbit.yml`
-  also goes to the bot, server and other repositories CodeRabbit reviews). Job name **Check module** is a required check
+- `.github/workflows/claude-reusable.yml` – the shared (`workflow_call`) Claude workflow: `review` on pull requests
+  (no drafts, bot PRs or forks) and `respond` to `@claude` from OWNER / MEMBER / COLLABORATOR, never bots. Secret
+  `CLAUDE_CODE_OAUTH_TOKEN` passed explicitly (no `secrets: inherit`); each job asks for less than the caller grants.
+  This repository's `claude.yml` calls it locally.
+- `templates/ci.yml`, `templates/release.yml`, `templates/coderabbit.yml`, `templates/claude.yml` – the workflow
+  files every module copies unchanged, with `__SHA__` / `__VERSION__` replaced by this repository's release commit
+  and tag (`coderabbit.yml` and `claude.yml` also go to the bot, server and other repositories). Job name **Check module** is a required check
   in the module rulesets.
 - `test/run.sh` – runs `check.sh`/`package.sh` against `test/fixture-module` (module id `fmc-fixture`): one passing
   case, failure cases each with the expected message, tag validation of `package.sh`; `notify-site.sh` against a
@@ -77,6 +81,9 @@ update when a new tag is made here. No build step and no npm dependencies (Node 
   serves exactly the files `module.json` and `module.zip`. Do not rename them.
 - **Untrusted input**: `build`/`lint` come from the module's own repository and run as shell; the action inputs and
   event values reach scripts only through `env:` (never `${{ }}` inside `run:`). Keep it that way.
+- **Claude workflow**: the triggers stay in the caller; the caller's job permissions are the union of what the
+  shared jobs need and nothing more. Keep the bot and author-association checks on `respond`, and the fork / draft /
+  bot checks on `review`. Comment events run the default branch's workflow, never PR code with the token.
 - **Templates**: pins stay full commit SHAs with the version comment; `persist-credentials: false`, `lfs: true`;
   release permissions only `contents: write` on the job. A change to `templates/` must be applied to every module
   repository too (say so in the PR).
