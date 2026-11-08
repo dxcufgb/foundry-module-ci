@@ -1,7 +1,7 @@
 # foundry-module-ci
 
 Shared CI and release for dxcufgb's Foundry VTT modules. Every module repository has the same
-small workflow files; the work happens here, in composite actions
+small workflow files; the work happens here, in composite actions:
 
 | Action | What it does |
 |---|---|
